@@ -1,0 +1,106 @@
+using MySql.Data.MySqlClient;
+using Mymmorpg;
+using GameServer.impl.service;
+using Dapper;
+using System.Data;
+
+namespace GameServer.service
+{
+    public class CharacterService : ICharacterService
+    {
+        public int AddCharacter(AddCharacterRequest request)
+        {
+            try
+            {
+                using (IDbConnection db = new MySqlConnection(_connectionString))
+                {
+                    var columns = new List<string>();
+                    var values = new List<string>();
+                    var parameters = new DynamicParameters();
+
+                    CharacterFields fields = request.CharacterFields;
+
+                    #region 测试代码
+                    // 获取 CharacterFields 类型的所有公共属性信息（包括名称、类型、getter/setter）
+                    var props = typeof(CharacterFields).GetProperties();
+                    // 遍历每个属性（字段）
+                    foreach (var prop in props)
+                    {
+                        // 获取属性名，例如 "CharacterName"、"PicPath" 等
+                        var propName = prop.Name;
+
+                        // 获取该属性在当前对象中的实际值
+                        var value = prop.GetValue(fields);
+
+                        // 如果值为 null（即未赋值），跳过这个字段（不会插入数据库）
+                        if (value == null) continue;
+
+                        // 如果是值类型（int、bool、enum等），并且值是该类型的默认值（如 int = 0），跳过这个字段
+                        if (prop.PropertyType.IsValueType && Activator.CreateInstance(prop.PropertyType)?.Equals(value) == true)
+                            continue;
+
+                        // 如果是枚举类型 Gender 且值为 Unknown（通常表示未设置），也跳过
+                        if (prop.PropertyType == typeof(Gender) && (Gender)value == Gender.Unknown)
+                            continue;
+
+                        // 将属性名转为数据库字段名：首字母小写，例如 CharacterName → characterName
+                        string columnName = Char.ToLowerInvariant(propName[0]) + propName.Substring(1);
+
+                        // 构建 Dapper 参数名，例如 "@CharacterName"
+                        string paramName = $"@{propName}";
+
+                        // 添加到 SQL 字段列表中（INSERT INTO 表名 (这些字段)）
+                        columns.Add(columnName);
+
+                        // 添加到 SQL 值占位符列表中（VALUES (@这些值)）
+                        values.Add(paramName);
+
+                        // 如果是 Gender 枚举，转为 int 存入数据库（枚举在数据库中通常以整数保存）
+                        if (prop.PropertyType == typeof(Gender))
+                            parameters.Add(paramName, (int)(Gender)value);
+                        else
+                            // 其它类型直接作为参数值添加（如字符串、int、DateTime等）
+                            parameters.Add(paramName, value);
+                    }
+                    #endregion
+
+                    // 如果没有字段可插入，返回 false
+                    if (columns.Count == 0) return 0;
+
+                    Console.WriteLine($"[CharacterService] [AddCharacter]: Character Name: {fields.CharacterName}");
+
+                    // 构建 SQL 插入语句
+                    string sql = $"INSERT INTO characters ({string.Join(", ", columns)}) VALUES ({string.Join(", ", values)}); SELECT LAST_INSERT_ID()";
+
+                    // 执行插入操作(返回数据库自增的id)
+                    int newId = db.ExecuteScalar<int>(sql, parameters);
+
+                    return newId;  // 如果插入了行,返回该条记录的id
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[CharacterService] [AddCharacter]: 错误: {ex}");
+                return 0;
+            }
+        }
+
+        // DTO 转 Protobuf 对象
+        private Character ToProto(Character dto)
+        {
+            return new Character
+            {
+                CharacterId = dto.CharacterId,
+                CharacterName = dto.CharacterName ?? "",
+                PicPath = dto.PicPath ?? "",
+                PrefabPath = dto.PrefabPath ?? "",
+                CharacterGender = dto.CharacterGender,
+                CharacterBirthday = dto.CharacterBirthday ?? "",
+                CampId = dto.CampId,
+                CharacterClassId = dto.CharacterClassId,
+                CharacterSkillsId = dto.CharacterSkillsId
+            };
+        }
+
+    }
+}

@@ -39,3 +39,4 @@ H:\UnityProject\MMORPG_Project\Src\GameServer\obj\Debug\net8.0\GameServer.pdb
 H:\UnityProject\MMORPG_Project\Src\GameServer\obj\Debug\net8.0\GameServer.genruntimeconfig.cache
 H:\UnityProject\MMORPG_Project\Src\GameServer\obj\Debug\net8.0\ref\GameServer.dll
 H:\UnityProject\MMORPG_Project\Src\GameServer\bin\Debug\net8.0\Dapper.dll
+H:\UnityProject\MMORPG_Project\Src\GameServer\obj\Debug\net8.0\GameServer.sourcelink.json

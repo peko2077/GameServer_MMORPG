@@ -10,4 +10,3 @@ namespace GameServer.dto
         public int Age { get; set; }
     }
 }
-

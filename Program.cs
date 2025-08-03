@@ -195,7 +195,8 @@ namespace GameServer
                             }
                             catch (Exception ex)
                             {
-                                Console.WriteLine("业务数据解析失败: " + ex.Message);
+                                Console.WriteLine("[Program.cs] [Server] 业务数据解析失败: " + ex.Message);
+                                Console.WriteLine(ex.StackTrace);  // 打印堆栈跟踪，找出具体位置
                             }
                             break;
 

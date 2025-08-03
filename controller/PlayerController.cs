@@ -17,8 +17,25 @@ namespace GameServer.controller
             _playerService = new PlayerService();// 绑定实际的业务实现
         }
 
+        #region 添加player
         public void AddPlayer(ApiRequest request, ClientState state)
         {
+
+            if (request.PayloadCase != ApiRequest.PayloadOneofCase.AddPlayer || request.AddPlayer == null)
+            {
+                Console.WriteLine("[AddPlayer] AddPlayer 字段为空！");
+                ApiResponse resp = new ApiResponse
+                {
+                    Success = false,
+                    Message = "AddPlayer 请求体为空，可能客户端未正确传入 payload",
+                    Error = "AddPlayer is null"
+                };
+                ResponseHelper.SendResponse(resp, state.Sender);
+                return;
+            }
+
+            Console.WriteLine($"[AddPlayer] PayloadCase = {request.PayloadCase}");
+
             AddPlayerRequest addReq = request.AddPlayer;
 
             // 校验 玩家名字是否为空
@@ -63,8 +80,7 @@ namespace GameServer.controller
                 // 插入成功，设置 PlayerId 并返回成功响应
                 player.PlayerId = newPlayerId;
                 response.Success = true;
-                response.Message = "player 添加成功";
-                response.Player = player;
+                response.Message = $"player 添加成功, playerId = {newPlayerId}";
             }
             else
             {
@@ -77,7 +93,9 @@ namespace GameServer.controller
             // 发送响应给客户端
             ResponseHelper.SendResponse(response, state.Sender);
         }
+        #endregion
 
+        #region 根据 playerId 查询player
         public void GetPlayer(ApiRequest request, ClientState state)
         {
 
@@ -103,7 +121,10 @@ namespace GameServer.controller
             {
                 response.Success = true;
                 response.Message = "玩家 获取成功";
-                response.Player = player;
+                response.Session.Data = new SessionTableData()
+                {
+                    Player = player
+                };
             }
             else
             {
@@ -115,12 +136,70 @@ namespace GameServer.controller
             // 发送响应给客户端
             ResponseHelper.SendResponse(response, state.Sender);
         }
+        #endregion
 
+        #region 根据 userId 查询player
+        public void GetPlayersByUserId(ApiRequest request, ClientState state)
+        {
+            int userId = request.GetPlayersByUserId.UserId;
+
+            // 校验 userId 合法性
+            if (userId <= 0)
+            {
+                ApiResponse errorResp = new ApiResponse
+                {
+                    Command = request.Command,
+                    Success = false,
+                    Message = "[PlayerController] userId 不能为空",
+                    Error = "[错误] GetPlayersByUserId, userId 无效"
+                };
+                ResponseHelper.SendResponse(errorResp, state.Sender);
+                return;
+            }
+
+            GetPlayersByUserIdRequest req = new()
+            {
+                UserId = userId,
+            };
+
+            List<Player>? players = _playerService.GetPlayersByUserId(req);
+
+            ApiResponse response = new ApiResponse()
+            {
+                Command = request.Command,
+                Session = new Session()
+            };
+
+            if (players != null && players.Count > 0)
+            {
+                response.Success = true;
+                response.Message = "玩家 获取成功";
+
+                // 构建List返回集合
+                SessionTableData data = new();
+                data.Players.AddRange(players);
+
+                // 将List 放进session的data中 响应给客户端
+                response.Session.Data = data;
+            }
+            else
+            {
+                response.Success = false;
+                response.Message = "玩家 获取失败";
+                response.Error = "[GetPlayersByUserId] 数据库查询失败";
+            }
+
+            // 发送响应给客户端
+            ResponseHelper.SendResponse(response, state.Sender);
+        }
+        #endregion
+
+        #region 修改player
         public void UpdatePlayer(ApiRequest request, ClientState state)
         {
             UpdatePlayerRequest req = request.UpdatePlayer;
             // 必须传入 playerId
-            if (!req.HasPlayerId || req.PlayerId <= 0)
+            if (req.PlayerId <= 0)
             {
                 ResponseHelper.SendResponse(new ApiResponse
                 {
@@ -185,6 +264,7 @@ namespace GameServer.controller
             }
 
         }
-
+        #endregion
     }
+
 }

@@ -9,8 +9,6 @@ namespace GameServer.service
 {
     public class PlayerService : IPlayerService
     {
-        public DateTime Birthday { get; set; }
-
         // 连接数据库
         private readonly string _connectionString = "server=localhost;user=root;password=peko2077;database=mymmorpg;Charset=utf8mb4;";
 
@@ -85,7 +83,7 @@ namespace GameServer.service
                 // 构建 SQL 插入语句
                 string sql = $"INSERT INTO players ({string.Join(", ", columns)}) VALUES ({string.Join(", ", values)}); SELECT LAST_INSERT_ID()";
 
-                // 执行插入操作并返回影响的行数
+                // 执行插入操作(返回数据库自增的id)
                 int newId = db.ExecuteScalar<int>(sql, parameters);
 
                 return newId;  // 如果插入了行，返回 true
@@ -121,6 +119,39 @@ namespace GameServer.service
                 return player;
             }
         }
+
+        #region 根据 userId 查询player
+        public List<Player>? GetPlayersByUserId(GetPlayersByUserIdRequest request)
+        {
+            using (IDbConnection db = new MySqlConnection(_connectionString))
+            {
+                int userId = request.UserId;
+                if (userId <= 0)
+                {
+                    Console.WriteLine($"[PlayerService] [GetPlayersByUserId]: userId不能为空");
+                    return [];
+                }
+
+                string sql = "SELECT * FROM players WHERE userId = @UserId";
+
+                List<Player> players = db.Query<Player>(sql, new { UserId = userId }).ToList();
+
+                if (players.Count == 0)
+                {
+                    Console.WriteLine($"[PlayerService] [GetPlayersByUserId]: players为空, userId = {userId}该用户下还没创建玩家...");
+                    return [];
+                }
+
+                foreach (Player item in players)
+                {
+                    Console.WriteLine($"[PlayerService] [GetPlayersByUserId]: playerId = {item.PlayerId}, playerName = {item.PlayerName}");
+                }
+
+                return players;
+
+            }
+        }
+        #endregion
 
         public bool UpdatePlayer(UpdatePlayerRequest request)
         {

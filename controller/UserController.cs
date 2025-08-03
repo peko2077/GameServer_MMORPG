@@ -55,8 +55,11 @@ namespace GameServer.controller
             if (result)
             {
                 response.Success = true;
-                response.Message = "user 添加成功";
-                response.User = user;
+                response.Message = $"user 添加成功";
+                response.Session.Data = new SessionTableData()
+                {
+                    User = user
+                };
             }
             else
             {
@@ -164,7 +167,10 @@ namespace GameServer.controller
             {
                 response.Success = true;
                 response.Message = "user 获取成功！";
-                response.User = user;
+                response.Session.Data = new SessionTableData
+                {
+                    User = user
+                };
             }
             else
             {
@@ -195,12 +201,25 @@ namespace GameServer.controller
 
             Console.WriteLine($"[LoginUser] userName = {user.UserName}, password = {user.Password}");
 
-            ApiResponse response = new ApiResponse();
+            Console.WriteLine($"[LoginUser] command: {request.Command}");
+
+            ApiResponse response = new ApiResponse()
+            {
+                Command = request.Command
+            };
+
             if (user != null)
             {
                 response.Success = true;
                 response.Message = "登录成功";
-                response.User = user;
+                // 向客户端发送登录的具体数据
+                response.Session = new Session()
+                {
+                    Data = new SessionTableData
+                    {
+                        User = user
+                    }
+                };
             }
             else
             {
